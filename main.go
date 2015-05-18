@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	goLogging "github.com/op/go-logging"
+	"github.com/sebdah/recharged-central-system/actions"
 	"github.com/sebdah/recharged-central-system/config"
 	"github.com/sebdah/recharged-central-system/logging"
+	"github.com/sebdah/recharged-shared/messages"
 	"github.com/sebdah/recharged-shared/rpc"
 	"github.com/sebdah/recharged-shared/websockets"
 )
@@ -21,7 +23,7 @@ func main() {
 	logging.Setup()
 
 	// Welcome message
-	log.Info("Starting re:charged central system")
+	log.Info("Starting re:charged central system service")
 	log.Info("Environment: %s", config.Env)
 
 	// Setup Websockets endpoint
@@ -48,7 +50,7 @@ func websocketCommunicator() {
 
 	for {
 		message = <-WsServer.ReadMessage
-		log.Debug("RECV: %s", message)
+		log.Debug("Incoming message: %s", message)
 		messageType, err := rpc.ParseMessage(message)
 		if err != nil {
 			log.Notice("The incoming message does not match the RPC protocol")
@@ -56,15 +58,52 @@ func websocketCommunicator() {
 		}
 
 		switch {
-		case messageType == 2:
-			log.Info("RECV: %s", message)
-		case messageType == 3:
-			log.Info("RECV: %s", message)
-		case messageType == 4:
-			log.Info("RECV: %s", message)
+		case messageType == 2: // Handle CALL
+			var callError *rpc.CallError
+			//var callResult rpc.CallResult
+
+			log.Debug("Incoming RPC CALL: %s", message)
+
+			// Instanciate the CALL
+			call := rpc.NewCall()
+			callError = call.Populate(message)
+			if callError != nil {
+				sendMessage(callError.String())
+				continue
+			}
+
+			switch {
+			case call.Action == "Authorize":
+				// Populate the request
+				authorizeReq, err := messages.NewAuthorizeReq(call.Payload)
+				if err != nil {
+					callError = rpc.NewCallError(call.UniqueId, err)
+					sendMessage(callError.String())
+					continue
+				}
+
+				// Try to authorize the request
+				authorizeConf, err := actions.Authorize(authorizeReq)
+				if err != nil {
+					callError = rpc.NewCallError(call.UniqueId, err)
+					sendMessage(callError.String())
+					continue
+				}
+				sendMessage(authorizeConf.String())
+			}
+
+		case messageType == 3: // Handle CALLRESULT
+			log.Debug("Incoming RPC CALLRESULT: %s", message)
+		case messageType == 4: // Handle CALLERROR
+			log.Debug("Incoming RPC CALLERROR: %s", message)
 		default:
 			log.Error("RPC call not supported")
 			continue
 		}
 	}
+}
+
+func sendMessage(msg string) {
+	log.Debug("Sending message: %s", msg)
+	WsServer.WriteMessage <- msg
 }
