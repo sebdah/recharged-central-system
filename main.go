@@ -10,6 +10,7 @@ import (
 	"github.com/sebdah/recharged-central-system/logging"
 	"github.com/sebdah/recharged-shared/messages"
 	"github.com/sebdah/recharged-shared/rpc"
+	"github.com/sebdah/recharged-shared/types"
 	"github.com/sebdah/recharged-shared/websockets"
 )
 
@@ -96,6 +97,7 @@ func websocketCommunicator() {
 				if err != nil {
 					callError = rpc.NewCallError(call.UniqueId, err)
 					sendMessage(callError.String())
+					continue
 				}
 
 				// Process the request
@@ -106,6 +108,9 @@ func websocketCommunicator() {
 					continue
 				}
 				sendMessage(bootNotificationConf.String())
+			case call.Action == "DataTransfer":
+				dataTransferConf := messages.NewDataTransferConf(types.DataTransferStatusRejected)
+				sendMessage(dataTransferConf.String())
 			}
 
 		case messageType == 3: // Handle CALLRESULT
