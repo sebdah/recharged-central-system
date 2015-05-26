@@ -82,7 +82,7 @@ func websocketCommunicator() {
 					continue
 				}
 
-				// Try to authorize the request
+				// Process the request
 				authorizeConf, err := actions.Authorize(authorizeReq)
 				if err != nil {
 					callError = rpc.NewCallError(call.UniqueId, err)
@@ -90,6 +90,22 @@ func websocketCommunicator() {
 					continue
 				}
 				sendMessage(authorizeConf.String())
+			case call.Action == "BootNotification":
+				// Populate the request
+				bootNotificationReq, err := messages.NewBootNotificationReq(call.Payload)
+				if err != nil {
+					callError = rpc.NewCallError(call.UniqueId, err)
+					sendMessage(callError.String())
+				}
+
+				// Process the request
+				bootNotificationConf, err := actions.BootNotification(*bootNotificationReq)
+				if err != nil {
+					callError = rpc.NewCallError(call.UniqueId, err)
+					sendMessage(callError.String())
+					continue
+				}
+				sendMessage(bootNotificationConf.String())
 			}
 
 		case messageType == 3: // Handle CALLRESULT
