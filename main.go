@@ -50,7 +50,7 @@ func websocketCommunicator() {
 	log.Info("Starting the websocket communicator")
 
 	for {
-		message = <-WsServer.ReadMessage
+		message = <-WsServer.ReadChannel
 		log.Debug("Incoming message: %s", message)
 		messageType, err := rpc.ParseMessage(message)
 		if err != nil {
@@ -126,5 +126,5 @@ func websocketCommunicator() {
 
 func sendMessage(msg string) {
 	log.Debug("Sending message: %s", msg)
-	WsServer.WriteMessage <- msg
+	WsServer.WriteChannel <- msg
 }
