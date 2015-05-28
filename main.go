@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	goLogging "github.com/op/go-logging"
 	"github.com/sebdah/recharged-central-system/actions"
 	"github.com/sebdah/recharged-central-system/config"
+	"github.com/sebdah/recharged-central-system/heartbeat"
 	"github.com/sebdah/recharged-central-system/logging"
 	"github.com/sebdah/recharged-shared/messages"
 	"github.com/sebdah/recharged-shared/rpc"
@@ -29,12 +31,15 @@ func main() {
 
 	// Setup Websockets endpoint
 	WsServer = websockets.NewServer()
+	WsServer.SetPingNotificationChannel(heartbeat.HeartbeatChannel)
 
 	// Fire up the websockets communicator
 	go websocketCommunicator()
 
 	// Configure handlers
-	http.HandleFunc("/ocpp-2.0j/ws", WsServer.Handler)
+	router := mux.NewRouter()
+	router.HandleFunc("/ocpp-2.0j/ws", WsServer.Handler)
+	http.Handle("/", router)
 
 	// Start the HTTP server
 	log.Info("Starting webserver on port %d", config.Config.GetInt("port"))
