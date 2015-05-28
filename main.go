@@ -38,7 +38,7 @@ func main() {
 
 	// Configure handlers
 	router := mux.NewRouter()
-	router.HandleFunc("/ocpp-2.0j/ws", WsServer.Handler)
+	router.HandleFunc("/ocpp-2.0j/ws/{chargePoint}", WsServer.Handler)
 	http.Handle("/", router)
 
 	// Start the HTTP server
